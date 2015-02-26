@@ -35,9 +35,7 @@ given out by Dr. Kui Wi
     float sTime = (float)(c->serviceTime);
     int priority = c->priority;
 
-    printf("customer %2d arrives: arrival time (%.2f), service time (%.1f), priority (%2d). \n", cNum, aTime, sTime, priority);
-
-
+    printf("Customer %2d arrives: Arrival time (%.2f), Service time (%.1f), Priority (%2d). \n", cNum, aTime, sTime, priority);
     return (void *) 0;
   }
 
