@@ -28,7 +28,7 @@ SimpelList.h - Header file for the PQS
   } listItem;
 
   //Add a customer to the lineup
-  void AddCustomerToClerkLineUp(struct clientStruct* client);
+  int AddCustomerToClerkLineUp(struct clientStruct* client);
   int getSizeOfLine();
   //Returns highest priority client AND*** removes it from
   //the collection (lineup) if remove is set to true.

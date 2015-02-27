@@ -11,8 +11,9 @@ If the clerk is busy it will wait for the "clientDone" convar to be triggered
 If the clerk is idle, it will wait for a client to arrive (or pick the highest from the PQS), then
 set its state to busy
 
-
 */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -24,13 +25,19 @@ set its state to busy
 
 
 int totalClients = 0;
+int customersDealtWith = 0;
 clerkStruct* clerk;
-char clientServeOrder[8192]; //String at the end show the serve order
+char clientServeOrder[8192]; //String at the end show the serve order [is larger incase we have (upto) ~2000 cases]
 char clientServePos = 0; //Serve order
 
 void setTotalClients(int number)
 {
   totalClients = number;
+}
+
+void clientDealtWith()
+{
+  ++customersDealtWith;
 }
 
 int getClerkBusy()
@@ -58,7 +65,6 @@ void appendClientNumToServeOrder(struct clientStruct* client)
 
 void* runClerkFunction(void* ptr)
 {
-  int customersDealtWith = 0;
   clerk = (clerkStruct* ) ptr;
   clerk->currentClient = 0;
   memset(&clientServeOrder,'\0', sizeof(clientServeOrder));
@@ -71,13 +77,7 @@ void* runClerkFunction(void* ptr)
       pthread_cond_wait(&clientDone, &clerkMutex);
       pthread_mutex_unlock(&clerkMutex);
       clerk->currentClient = 0;
-
-      customersDealtWith++;
-      if(customersDealtWith >= totalClients) //We have dealt with every customer, it is safe to exit now :D
-      {
-        printf("\n\nClients Served in order:\n%s\n", clientServeOrder);
-        return (void* ) 0;
-      }
+      clientDealtWith();
     }
     else
     {
@@ -89,15 +89,18 @@ void* runClerkFunction(void* ptr)
         pthread_cond_wait(&clientArrive, &clerkMutex);
         pthread_mutex_unlock(&clerkMutex);
       }
-      struct clientStruct* client = getHighestPriorityClient(1); //Guaranteed there is somebody in the line
-      if(client == 0)
+      struct clientStruct* client = getHighestPriorityClient(1);
+      if(client != 0) //Client should only != 0 on a system error
       {
-        printf("Error: Priority Queue returned with a null client\n");
-        continue; //Note this should never happen. Here incase something <bad> happens though.
+        clerk->currentClient = client;
+        appendClientNumToServeOrder(client);
+        pthread_cond_broadcast(&clerkIdle);
       }
-      clerk->currentClient = client;
-      appendClientNumToServeOrder(client);
-      pthread_cond_broadcast(&clerkIdle);
+    }
+    if(customersDealtWith >= totalClients) //We have dealt with every customer, it is safe to exit now :D
+    {
+      printf("\n\nClients Served in order:\n%s\n", clientServeOrder);
+      return (void* ) 0;
     }
   }
 }

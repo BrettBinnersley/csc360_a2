@@ -12,6 +12,10 @@ the program exits
 
 This is the main thread (idle most of the time).
 
+Note: input file MUST follow format defined in the outline.
+If it does not, an error will be displayed in the terminal.
+If input values are invalid for a client (ie: negative starting time, or priorty > 10),
+they will simply be ignored, and a thread will NOT be spawned for them.
 */
 
 
@@ -21,7 +25,7 @@ This is the main thread (idle most of the time).
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#define BUFF_SIZE 1024 //All buffers are 1024 bytes long.
+#define BUFF_SIZE 1024 //All strings are 1024 bytes long (for simplicities sake).
 #include "customer.h"
 #include "clerk.h"
 #include "SimpleList.h"
@@ -50,6 +54,18 @@ char* withoutSpaces(char* str)
   *(endOfStr + 1) = 0; // Write null terminator
 
   return str;
+}
+
+//Check for an error in the input format. IF one exists, the program will exit.
+void checkInputError(char* pch)
+{
+  if(pch == 0)
+  {
+    printf("***************************\n");
+    printf("ERROR: Invalid input format\n");
+    printf("***************************\n\n");
+    exit(0);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -82,7 +98,7 @@ int main(int argc, char *argv[])
     }
     if(c == EOF)
     {
-      printf("No clients to be served.\n");
+      printf("No clients to be served (empty input)\n");
       exit(0);
     }
     tmpBuffer[pos++] = c;
@@ -123,33 +139,47 @@ int main(int argc, char *argv[])
         char* trimmedBuff = withoutSpaces(buffer);
         if(strlen(trimmedBuff) != 0)
         {
-          //Parse buffer and extract the useful information
+          //Parse buffer (tokenize) and extract the information.
           char * pch;
           pch = strtok (buffer,":,");
+          checkInputError(pch); // Check for input errors (if they exist, exit)
           int clientNum = atoi(pch);
           pch = strtok (NULL, ",");
+          checkInputError(pch); // Check for input errors (if they exist, exit)
           int arrTime = atoi(pch);
           pch = strtok (NULL, ",");
+          checkInputError(pch); // Check for input errors (if they exist, exit)
           int servTime = atoi(pch);
           pch = strtok (NULL, ",");
+          checkInputError(pch); // Check for input errors (if they exist, exit)
           int priority = atoi(pch);
 
-          //Spawn client thread
-          pthread_t* clientThread = &clientThreads[currentClient];
-          clientStruct* client = &clientStructs[currentClient];
-          client->clientNumber = clientNum;
-          client->arrivalTime = arrTime;
-          client->serviceTime = servTime;
-          client->priority = priority;
-          client->placeInFile = currentClient;
-
-          int success = pthread_create( clientThread, NULL, runClientFunction, (void*) client);
-          if (success != 0)
+          //Handle "special cases" (invalid props) -> Simply do not spawn a client for them
+          if(priority < 0 || priority > 10 || //Illegal priority
+            arrTime < 0) // Arrive before we open
           {
-            fprintf(stderr, "Can't Create Client Thread: %s\n", strerror(success));
-            exit(1);
+            printf("Unable to create client %d: illegal values\n", clientNum);
+            setTotalClients(--totalClients); //Decrease number of clients we are expecting to run
           }
-          memset(&buffer, '\0', BUFF_SIZE);
+          else
+          {
+            //Spawn client thread
+            pthread_t* clientThread = &clientThreads[currentClient];
+            clientStruct* client = &clientStructs[currentClient];
+            client->clientNumber = clientNum;
+            client->arrivalTime = arrTime;
+            client->serviceTime = servTime;
+            client->priority = priority;
+            client->placeInFile = currentClient;
+
+            int success = pthread_create( clientThread, NULL, runClientFunction, (void*) client);
+            if (success != 0)
+            {
+              fprintf(stderr, "Can't Create Client Thread: %s\n", strerror(success));
+              exit(1);
+            }
+          }
+          memset(&buffer, '\0', BUFF_SIZE); //Zero buffer
           pos = 0;
           currentClient++;
           //Continue IF EOF is not reached.
@@ -171,8 +201,14 @@ int main(int argc, char *argv[])
     }
   } //End read file/spawn client threads
 
+  fclose(input); //Close input file
+
   //Wait for the clerk to finish before exiting the program
-  pthread_join( clerkThread, &retval);
+  success = pthread_join( clerkThread, &retval);
+  if(success !=0 )
+  {
+    fprintf(stderr, "Can't join client & main thread: %s\n", strerror(success));
+  }
 
   return 0;
 }//End main

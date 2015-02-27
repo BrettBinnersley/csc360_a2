@@ -16,6 +16,7 @@ It is protected by a mutex. Also all the thread variables (mutexes, convars) are
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "SimpleList.h"
 #include "clerk.h"
@@ -26,10 +27,15 @@ struct listItem* listHead;
 int sizeOfList = 0;
 
 
-//Add a customer to the lineup
-void AddCustomerToClerkLineUp(struct clientStruct* client)
+//Add a customer to the lineup. Returns 0 on success, non zero on failure
+int AddCustomerToClerkLineUp(struct clientStruct* client)
 {
-  pthread_mutex_lock(&pqsMutex);
+  int success = pthread_mutex_lock(&pqsMutex);
+  if(success != 0)
+  {
+    printf("Error locking PQS Mutex %s\n", strerror(success));
+    return success;
+  }
 
   while(1) //Wrap in a while loop, so we can easily break out and unlock the mutex when done
   {
@@ -54,15 +60,32 @@ void AddCustomerToClerkLineUp(struct clientStruct* client)
     break;
   }
   ++sizeOfList;
-  pthread_mutex_unlock(&pqsMutex);
+  success = pthread_mutex_unlock(&pqsMutex);
+  if(success != 0)
+  {
+    printf("Error unlocking PQS Mutex %s\n", strerror(success));
+    return success;
+  }
+  return 0;
 }
 
-//# of elements (customers) present in the PQS
+//# of elements (customers) present in the PQS. Returns -1 on an error
 int getSizeOfLine()
 {
-  pthread_mutex_lock(&pqsMutex); //Lock to ensure that nobody is editing the PQS as we get the size
+  //Lock to ensure that nobody is editing the PQS as we get the size
+  int success = pthread_mutex_lock(&pqsMutex);
+  if(success != 0)
+  {
+    printf("Error locking PQS Mutex %s\n", strerror(success));
+    return -1;
+  }
   int x = sizeOfList;
-  pthread_mutex_unlock(&pqsMutex);
+  success = pthread_mutex_unlock(&pqsMutex);
+  if(success != 0)
+  {
+    printf("Error unlocking PQS Mutex %s\n", strerror(success));
+    return -1;
+  }
   return x;
 }
 
@@ -70,7 +93,11 @@ int getSizeOfLine()
 //If no client is in the lineup, it will return 0 (null)
 struct clientStruct* getHighestPriorityClient(int andRemove)
 {
-  pthread_mutex_lock(&pqsMutex);
+  int success = pthread_mutex_lock(&pqsMutex);
+  if(success != 0)
+  {
+    printf("Error locking PQS Mutex %s\n", strerror(success));
+  }
   struct listItem* highestPri = listHead; //highest priority client
   while(1) //Wrap in a while loop, so we can easily break out and unlock the mutex when done
   {
@@ -157,7 +184,12 @@ struct clientStruct* getHighestPriorityClient(int andRemove)
     }
     break; //Exit while(true) loop.
   }
-  pthread_mutex_unlock(&pqsMutex);
+
+  success = pthread_mutex_unlock(&pqsMutex);
+  if(success != 0)
+  {
+    printf("Error unlocking PQS Mutex %s\n", strerror(success));
+  }
 
   //Return 0 if no node was found, else return the nodes client data if one was found
   if(highestPri == 0)

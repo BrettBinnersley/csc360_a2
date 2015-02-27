@@ -12,7 +12,7 @@ all: makePQS
 clean: cleanItems
 
 makePQS:
-	gcc pqs.c SimpleList.c customer.c clerk.c -o pqs
+	gcc pqs.c SimpleList.c customer.c clerk.c -pthread -o pqs
 
 cleanItems:
 	-rm -rf *.o *.exe

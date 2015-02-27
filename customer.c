@@ -43,6 +43,21 @@ float calculateDeltaTime()
   return timeAsFloat;
 }
 
+//Requesting service (wait for signal, check if I am the requested client, if not wait for another signal)
+void reqestService(clientStruct* c)
+{
+  pthread_mutex_lock(&requestMutex);
+  while(1)
+  {
+    pthread_cond_wait(&clerkIdle, &requestMutex);
+    if(getCurrentClient() == c)
+    {
+      break;
+    }
+  }
+  pthread_mutex_unlock(&requestMutex);
+}
+
 void* runClientFunction(void* ptr)
 {
   clientStruct* c = (clientStruct* ) ptr;
@@ -57,20 +72,17 @@ void* runClientFunction(void* ptr)
   {
     printf("Customer %2d waits for the finish of customer %2d. \n", cNum, getCurrentClient()->clientNumber);
   }
-  AddCustomerToClerkLineUp(c); //Add customer to the lineup (PQS). This is protected by a mutex.
+  int addSuccess = AddCustomerToClerkLineUp(c); //Add customer to the lineup (PQS). This is protected by a mutex.
+  if(addSuccess !=0) //Catch system errors
+  {
+    clientDealtWith(); //We can say that this client was dealt with
+    pthread_cond_broadcast(&clientArrive); //Broadcast (so the clerk gets signalled that something changed)
+    return (void* ) 0;
+  }
   pthread_cond_broadcast(&clientArrive);
 
-  //Requesting service (wait for signal, check if I am the requested client, if not wait for another signal)
-  pthread_mutex_lock(&requestMutex);
-  while(1)
-  {
-    pthread_cond_wait(&clerkIdle, &requestMutex);
-    if(getCurrentClient() == c)
-    {
-      break;
-    }
-  }
-  pthread_mutex_unlock(&requestMutex);
+  //Request service from the clerk. It will be stuck here until clerk says it is ready to serve me
+  reqestService(c);
 
   //Time for client to be served (post notice that the clerk is serving the customer)
   printf("The clerk starts serving customer %2d at time %.2f. \n", c->clientNumber, calculateDeltaTime());
