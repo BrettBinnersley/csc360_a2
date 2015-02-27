@@ -52,10 +52,21 @@ char* withoutSpaces(char* str)
   return str;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-  char* inputFile = "customers.txt";
+  if (argc != 2)
+  {
+    printf("Usage pqs <input>\n");
+    exit(0);
+  }
+
+  char* inputFile = argv[1];
   FILE* input = fopen(inputFile,"r");
+  if(input == 0)
+  {
+    printf("Unable to locate input file\n");
+    exit(0);
+  }
   int totalClients = 0;
   int pos = 0;
   char tmpBuffer[BUFF_SIZE];

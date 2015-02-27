@@ -60,7 +60,10 @@ void AddCustomerToClerkLineUp(struct clientStruct* client)
 //# of elements (customers) present in the PQS
 int getSizeOfLine()
 {
-  return sizeOfList;
+  pthread_mutex_lock(&pqsMutex); //Lock to ensure that nobody is editing the PQS as we get the size
+  int x = sizeOfList;
+  pthread_mutex_unlock(&pqsMutex);
+  return x;
 }
 
 //Returns highest priority client AND*** removes it from the collection (lineup)
@@ -99,21 +102,31 @@ struct clientStruct* getHighestPriorityClient(int andRemove)
         highestPri = iter;
         continue;
       }
-      else if (iter->client->priority == highestPri->client->priority) //Same priority => Use shorter serve time
+      else if (iter->client->priority == highestPri->client->priority) //Same priority => Use sooner arrival time
       {
-        if(iter->client->serviceTime < highestPri->client->serviceTime)
+        if(iter->client->arrivalTime < highestPri->client->arrivalTime)
         {
           highestPri = iter;
           continue;
         }
-        else if(iter->client->serviceTime == highestPri->client->serviceTime)//Same priority + serivce time => Use order of input
+        else if (iter->client->arrivalTime == highestPri->client->arrivalTime) //Same priority + arrival time => Use shorter service time
         {
-          if(iter->client->placeInFile < highestPri->client->placeInFile)
+          if(iter->client->serviceTime < highestPri->client->serviceTime)
           {
             highestPri = iter;
             continue;
           }
+          else if(iter->client->serviceTime == highestPri->client->serviceTime)//Same priority + service time + arrival time=> Use order of input
+          {
+            if(iter->client->placeInFile < highestPri->client->placeInFile)
+            {
+              highestPri = iter;
+              continue;
+            }
+          }
         }
+
+
       }
       else
       {
