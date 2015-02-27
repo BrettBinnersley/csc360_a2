@@ -1,0 +1,14 @@
+Brett Binnersley
+V00776751
+Csc 360
+Assignment #2
+
+
+My assignment does not follow my design spec (Part 1 of the assignment) due to the fact that there were major errors in it.
+All the .c files state (roughly) what they do at the top.
+
+To build
+make
+
+to run
+./pqs <FILENAME>

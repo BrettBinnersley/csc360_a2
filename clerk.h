@@ -6,14 +6,21 @@ Assignment #2
 
 Operating Systems
 
-PQS.c - Defines the clerk that serves all the customers.
-
-NOTE: My program does NOT* follow my design document
-because there were mistakes in it. It follows the design
-given out by Dr. Kui Wi
+clerk.h - Header file for clerk
 */
 
-#ifndef clerk_included
-#define clerk_included
+#ifndef clerkIncluded
+#define clerkIncluded
+
+  typedef struct clerkStruct { //Struct defining the clerk
+    struct clientStruct* currentClient;
+  } clerkStruct;
+
+  void* runClerkFunction(void* ptr);
+
+  void setTotalClients(int number);
+  int getClerkBusy(); //Returns nonzero if clerk is busy, 0 if it is idle
+  struct clientStruct* getCurrentClient();//Returns current client (or 0 if no client is present)
+
 
 #endif
