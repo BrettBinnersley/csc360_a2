@@ -4,7 +4,8 @@ Csc 360
 Assignment #2
 
 
-My assignment does not follow my design spec (Part 1 of the assignment) due to the fact that there were major errors in it.
+My assignment does not follow my design spec uploaded to connex (Part 1 of the assignment) due to the fact that there were <major> errors in it.
+I have redone the document design and submitted it at the bottom of this readme.
 All the .c files state (roughly) what they do at the top.
 
 To build
@@ -12,3 +13,66 @@ make
 
 to run
 ./pqs <FILENAME>
+
+
+
+
+
+
+Assignment2 Design - (RE - DONE)
+
+1) I am going to use n threads for the clients (1 each), 1 main thread (main method) and 1 for the clerk.
+2) The main thread will do nothing (sit idle) other than wait for the clerk to be finished serving all the customers. It will then exit. All the threads work independently.
+3) Three mutexes will be used. One on the PQS data structure itself to ensure that nobody is reading / writing to it at the same time. One will be used for the clerk to make sure it is not waiting for multiple clients at the same time. One will be used for the client threads to ensure that they are not all trying to access the clerk at the same time.
+4) The main thread will be idle. It will wait for all the customers and the clerk to finish, then exit.
+5) I am going to represent customers with a struct.
+{
+  ClientNumber: //Unqiue to each client
+  Arrvial Time:
+  Service Time:
+  Priority:
+  PlaceInFile: //FINAL TIE BREAKER
+}
+and they are all going to be stored (shared) in a priority queue protected with a mutex.
+6) Mutexes will guard all data structures that could be modified concurrently.
+
+7) There will be 3 convars used in the program. Commented beside them is their use
+  pthread_cond_t clerkIdle;     //Sent when the clerk is idle (clerk -> client)
+  pthread_cond_t clientArrive; //Sent when a client arrives (client -> clerk)
+  pthread_cond_t clientDone; //Sent when the client is done with the clerk (from client->clerk)
+ The idle convar and the clientArrive convar are assosciated with the clerkMutex. The clientDone is assosciated with the pqsMutex.
+
+
+
+8)
+main()
+{
+  SpawnAllClients + Clerk thread & wait for finish
+}
+
+<For client threads>
+  sleep(arriveTime)
+  request_service()
+  sleep(serviceTime)
+  releaseService() <signal convar clientDone>
+
+<For clerk thread>
+  while(true)
+  {
+    if(state = busy)
+    {
+      wait for signal from convar ClientDone
+      set state to idle
+      if dealt with all clients, then exit thread.
+    }
+    else if(state = idle)
+    {
+      find highest priority client -> X
+      signal to client X (request service)
+      set state to busy
+    }
+  }
+
+
+
+

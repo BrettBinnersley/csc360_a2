@@ -125,8 +125,6 @@ struct clientStruct* getHighestPriorityClient(int andRemove)
             }
           }
         }
-
-
       }
       else
       {
