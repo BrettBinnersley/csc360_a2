@@ -56,7 +56,8 @@ char* withoutSpaces(char* str)
   return str;
 }
 
-//Check for an error in the input format. IF one exists, the program will exit.
+//Check for an error in the input format.
+//IF one exists, the program  displays an error message and exits
 void checkInputError(char* pch)
 {
   if(pch == 0)
